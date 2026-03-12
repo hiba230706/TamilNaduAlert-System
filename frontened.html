@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartFishNet - Marine Fisheries Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+            padding: 2rem 0;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 0 1.5rem;
+        }
+
+        .logo h1 {
+            color: #1e3c72;
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 1rem;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            color: #555;
+            text-decoration: none;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            transform: translateX(5px);
+            box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
+        }
+
+        .nav-link i {
+            margin-right: 1rem;
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e3c72;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Content Sections */
+        .content-section {
+            display: none;
+        }
+
+        .content-section.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Dashboard Cards */
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        .card-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .card-icon.trips { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .card-icon.alerts { background: linear-gradient(135deg, #ff6b6b, #ee5a52); }
+        .card-icon.weather { background: linear-gradient(135deg, #4ecdc4, #44a08d); }
+        .card-icon.volume { background: linear-gradient(135deg, #45b7d1, #96c93d); }
+
+        .card-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e3c72;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-trend {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .trend-up { color: #4ecdc4; }
+        .trend-down { color: #ff6b6b; }
+
+        /* Map Container */
+        .map-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .map-controls {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .control-btn {
+            padding: 0.8rem 1rem;
+            border: none;
+            border-radius: 8px;
+            background: rgba(30, 60, 114, 0.1);
+            color: #1e3c72;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .control-btn:hover {
+            background: rgba(30, 60, 114, 0.2);
+        }
+
+        .control-btn.active {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            box-shadow: 0 4px 15px rgba(30, 60, 114, 0.3);
+        }
+
+        #map, #heatmap {
+            height: 500px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Table Styles */
+        .table-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .search-filter {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input {
+            padding: 0.8rem 1rem;
+            border: 2px solid rgba(30, 60, 114, 0.2);
+            border-radius: 8px;
+            outline: none;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .search-input:focus {
+            border-color: #1e3c72;
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+        }
+
+        .export-btn {
+            padding: 0.8rem 1.5rem;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        th {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.85rem;
+        }
+
+        tr:hover {
+            background: rgba(30, 60, 114, 0.05);
+        }
+
+        /* Status Badges */
+        .status-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-active { background: rgba(78, 205, 196, 0.2); color: #4ecdc4; }
+        .status-warning { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .status-danger { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+
+        /* Alert Styles */
+        .alert-item {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #ff6b6b;
+            transition: all 0.3s ease;
+        }
+
+        .alert-item:hover {
+            transform: translateX(5px);
+        }
+
+        .alert-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .alert-level {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .alert-level.high { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+        .alert-level.medium { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+
+        /* Filter Panel */
+        .filter-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
+        }
+
+        .filter-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #1e3c72;
+            font-size: 0.9rem;
+        }
+
+        select, input[type="date"] {
+            padding: 0.8rem;
+            border: 2px solid rgba(30, 60, 114, 0.2);
+            border-radius: 8px;
+            outline: none;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input[type="date"]:focus {
+            border-color: #1e3c72;
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+        }
+
+        /* Charts */
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .chart-card h3 {
+            margin-bottom: 1rem;
+            color: #1e3c72;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+
+            .sidebar .logo p,
+            .nav-link span {
+                display: none;
+            }
+
+            .main-content {
+                margin-left: 70px;
+                padding: 1rem;
+            }
+
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .header-title {
+                font-size: 1.5rem;
+            }
+
+            .map-header,
+            .table-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-filter {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .search-input {
+                flex: 1;
+                min-width: 200px;
+            }
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(30, 60, 114, 0.3);
+            border-radius: 50%;
+            border-top: 2px solid #1e3c72;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Custom Popup */
+        .custom-popup {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .popup-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #1e3c72;
+        }
+
+        .popup-info {
+            margin-bottom: 0.3rem;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo">
+                <h1><i class="fas fa-fish"></i> SmartFishNet</h1>
+                <p>Marine Fisheries Management</p>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-section="dashboard">
+                        <i class="fas fa-chart-pie"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-section="heatmap">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <span>Zone Heatmap</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-section="logbook">
+                        <i class="fas fa-book"></i>
+                        <span>Fishermen Logs</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-section="alerts">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Overfished Alerts</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-section="reports">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Reports</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1 class="header-title">Marine Fisheries Dashboard</h1>
+                <div class="user-info">
+                    <span>Tamil Nadu Marine Dept.</span>
+                    <div class="user-avatar">TN</div>
+                </div>
+            </header>
+
+            <!-- Dashboard Section -->
+            <section class="content-section active" id="dashboard">
+                <div class="dashboard-cards">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon trips">
+                                <i class="fas fa-ship"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="totalTrips">1,247</div>
+                        <div class="card-label">Total Fishing Trips</div>
+                        <div class="card-trend">
+                            <i class="fas fa-arrow-up trend-up"></i>
+                            <span>+12% from last week</span>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon alerts">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="alertCount">23</div>
+                        <div class="card-label">Overfished Zone Alerts</div>
+                        <div class="card-trend">
+                            <i class="fas fa-arrow-down trend-down"></i>
+                            <span>-5% from last week</span>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon weather">
+                                <i class="fas fa-cloud-sun"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="weatherWarnings">2</div>
+                        <div class="card-label">Weather Warnings</div>
+                        <div class="card-trend">
+                            <i class="fas fa-exclamation-circle trend-up"></i>
+                            <span>Active alerts</span>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon volume">
+                                <i class="fas fa-weight-hanging"></i>
+                            </div>
+                        </div>
+                        <div class="card-value" id="weeklyVolume">45.2K</div>
+                        <div class="card-label">Weekly Catch (kg)</div>
+                        <div class="card-trend">
+                            <i class="fas fa-arrow-up trend-up"></i>
+                            <span>+8% from last week</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>Weekly Catch Trends</h3>
+                        <canvas id="catchChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Port Activity Distribution</h3>
+                        <canvas id="portChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <div class="map-container">
+                    <div class="map-header">
+                        <h3>Tamil Nadu Fishing Activity Overview</h3>
+                        <div class="map-controls">
+                            <button class="control-btn active" onclick="toggleDashboardLayer('activity')">
+                                Activity Heatmap
+                            </button>
+                            <button class="control-btn" onclick="toggleDashboardLayer('alerts')">
+                                Alert Zones
+                            </button>
+                            <button class="control-btn" onclick="toggleDashboardLayer('weather')">
+                                Weather Overlay
+                            </button>
+                        </div>
+                    </div>
+                    <div id="map"></div>
+                </div>
+            </section>
+
+            <!-- Heatmap Section -->
+            <section class="content-section" id="heatmap">
+                <div class="map-container">
+                    <div class="map-header">
+                        <h3>Fishing Zone Heatmap - Tamil Nadu Coast</h3>
+                        <div class="map-controls">
+                            <button class="control-btn active" onclick="toggleHeatmapLayer('pressure')">
+                                Fishing Pressure
+                            </button>
+                            <button class="control-btn" onclick="toggleHeatmapLayer('overfished')">
+                                Overfished Alerts
+                            </button>
+                            <button class="control-btn" onclick="toggleHeatmapLayer('predicted')">
+                                Predicted Catch
+                            </button>
+                            <button class="control-btn" onclick="toggleHeatmapLayer('gps')">
+                                Live GPS Logs
+                            </button>
+                        </div>
+                    </div>
+                    <div id="heatmap"></div>
+                </div>
+            </section>
+
+            <!-- Logbook Section -->
+            <section class="content-section" id="logbook">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Fishermen Logbook Entries</h3>
+                        <div class="search-filter">
+                            <input type="text" placeholder="Search fishermen..." class="search-input" id="logSearch" onkeyup="filterLogbook()">
+                            <button class="export-btn" onclick="exportLogbook('csv')">
+                                <i class="fas fa-download"></i> Export CSV
+                            </button>
+                            <button class="export-btn" onclick="exportLogbook('excel')">
+                                <i class="fas fa-file-excel"></i> Export Excel
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <table id="logbookTable">
+                        <thead>
+                            <tr>
+                                <th>Fisher ID</th>
+                                <th>Fisher Name</th>
+                                <th>Port</th>
+                                <th>Date & Time</th>
+                                <th>Species</th>
+                                <th>Catch (kg)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logbookData">
+                            <!-- Data populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Alerts Section -->
+            <section class="content-section" id="alerts">
+                <div class="table-container">
+                    <h3 style="margin-bottom: 2rem;">Overfished Area Alerts</h3>
+                    <div id="alertsList">
+                        <!-- Alerts populated by JavaScript -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports Section -->
+            <section class="content-section" id="reports">
+                <div class="filter-panel">
+                    <h3 style="margin-bottom: 1.5rem;">Generate Reports</h3>
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label class="filter-label">Report Type</label>
+                            <select id="reportType">
+                                <option value="daily">Daily Report</option>
+                                <option value="weekly">Weekly Report</option>
+                                <option value="monthly">Monthly Report</option>
+                                <option value="custom">Custom Range</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">Start Date</label>
+                            <input type="date" id="startDate" value="2024-08-01">
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">End Date</label>
+                            <input type="date" id="endDate" value="2024-08-03">
+                        </div>
+                        <div class="filter-group">
+                            <label class="filter-label">Port Filter</label>
+                            <select id="portFilter">
+                                <option value="all">All Ports</option>
+                                <option value="chennai">Chennai</option>
+                                <option value="tuticorin">Tuticorin</option>
+                                <option value="nagapattinam">Nagapattinam</option>
+                                <option value="rameswaram">Rameswaram</option>
+                                <option value="cuddalore">Cuddalore</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                        <button class="export-btn" onclick="generateReport('pdf')">
+                            <i class="fas fa-file-pdf"></i> Generate PDF Report
+                        </button>
+                        <button class="export-btn" onclick="generateReport('csv')">
+                            <i class="fas fa-file-csv"></i> Generate CSV Report
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <h3 style="margin-bottom: 1.5rem;">Report Preview</h3>
+                    <div id="reportPreview">
+                        <p>Select report parameters above to generate preview...</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Sample Data
+        const fishingData = [
+            { id: 'F001', name: 'Raman Kumar', port: 'Chennai', date: '2024-08-03 06:30', species: 'Mackerel', catch: 45.2, status: 'active' },
+            { id: 'F002', name: 'Suresh Babu', port: 'Tuticorin', date: '2024-08-03 05:45', species: 'Sardine', catch: 32.8, status: 'active' },
+            { id: 'F003', name: 'Murugan S', port: 'Nagapattinam', date: '2024-08-02 18:20', species: 'Pomfret', catch: 28.5, status: 'warning' },
+            { id: 'F004', name: 'Karthik Raja', port: 'Rameswaram', date: '2024-08-02 16:15', species: 'Tuna', catch: 67.3, status: 'danger' },
+            { id: 'F005', name: 'Selvam P', port: 'Cuddalore', date: '2024-08-02 14:30', species: 'Kingfish', catch: 41.7, status: 'active' },
+            { id: 'F006', name: 'Arun Kumar', port: 'Chennai', date: '2024-08-01 19:45', species: 'Mackerel', catch: 52.1, status: 'active' },
+            { id: 'F007', name: 'Dinesh M', port: 'Tuticorin', date: '2024-08-01 17:20', species: 'Sardine', catch: 29.4, status: 'warning' },
+            { id: 'F008', name: 'Bala Krishna', port: 'Nagapattinam', date: '2024-08-01 15:10', species: 'Seer Fish', catch: 35.8, status: 'active' },
+            { id: 'F009', name: 'Rajesh M', port: 'Chennai', date: '2024-08-01 12:30', species: 'Pomfret', catch: 29.3, status: 'active' },
+            { id: 'F010', name: 'Venkatesh K', port: 'Tuticorin', date: '2024-07-31 18:15', species: 'Tuna', catch: 58.7, status: 'warning' }
+        ];
+
+        const alertsData = [
+            { zone: 'Chennai Bay North', level: 'high', reason: 'Consecutive high-volume catches', duration: '7 days', lat: 13.0827, lon: 80.2707 },
+            { zone: 'Tuticorin Deep Sea', level: 'medium', reason: 'Model-predicted depletion', duration: '14 days', lat: 8.7642, lon: 78.1348 },
+            { zone: 'Nagapattinam Coast', level: 'high', reason: 'Overfishing detected', duration: '10 days', lat: 10.7905, lon: 79.8448 },
+            { zone: 'Rameswaram Waters', level: 'medium', reason: 'Species diversity decline', duration: '5 days', lat: 9.2876, lon: 79.3129 },
+            { zone: 'Cuddalore Fishing Zone', level: 'high', reason: 'Excessive trawling activity', duration: '12 days', lat: 11.7480, lon: 79.7714 }
+        ];
+
+        const ports = [
+            { name: 'Chennai', lat: 13.0827, lon: 80.2707, activity: 'high', trips: 342 },
+            { name: 'Tuticorin', lat: 8.7642, lon: 78.1348, activity: 'medium', trips: 278 },
+            { name: 'Nagapattinam', lat: 10.7905, lon: 79.8448, activity: 'high', trips: 298 },
+            { name: 'Rameswaram', lat: 9.2876, lon: 79.3129, activity: 'low', trips: 156 },
+            { name: 'Cuddalore', lat: 11.7480, lon: 79.7714, activity: 'medium', trips: 173 }
+        ];
+
+        // Global variables
+        let map, heatmapMap;
+        let currentDashboardLayer = 'activity';
+        let currentHeatmapLayer = 'pressure';
+        let heatmapLayers = {};
+        let dashboardLayers = {};
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNavigation();
+            initializeMaps();
+            populateLogbook();
+            populateAlerts();
+            initializeCharts();
+            updateDashboardStats();
+        });
+
+        // Navigation functionality
+        function initializeNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('.content-section');
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all links and sections
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    sections.forEach(s => s.classList.remove('active'));
+                    
+                    // Add active class to clicked link
+                    this.classList.add('active');
+                    
+                    // Show corresponding section
+                    const targetSection = this.getAttribute('data-section');
+                    document.getElementById(targetSection).classList.add('active');
+                    
+                    // Initialize maps when sections are shown
+                    if (targetSection === 'heatmap' && !heatmapMap) {
+                        setTimeout(() => initializeHeatmap(), 100);
+                    }
+                });
+            });
+        }
+
+        // Initialize maps
+        function initializeMaps() {
+            // Dashboard map
+            map = L.map('map').setView([11.1271, 78.6569], 7);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            // Add port markers
+            ports.forEach(port => {
+                const color = port.activity === 'high' ? '#ff6b6b' : 
+                            port.activity === 'medium' ? '#ffc107' : '#4ecdc4';
+                
+                const marker = L.circleMarker([port.lat, port.lon], {
+                    radius: 15,
+                    fillColor: color,
+                    color: '#fff',
+                    weight: 3,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(map);
+
+                marker.bindPopup(`
+                    <div class="custom-popup">
+                        <div class="popup-title">${port.name} Port</div>
+                        <div class="popup-info">Activity Level: <strong>${port.activity.toUpperCase()}</strong></div>
+                        <div class="popup-info">Total Trips: <strong>${port.trips}</strong></div>
+                        <div class="popup-info">Status: <strong>Active</strong></div>
+                    </div>
+                `);
+            });
+
+            // Create heatmap layer
+            const heatmapData = generateHeatmapData();
+            dashboardLayers.activity = L.heatLayer(heatmapData, {
+                radius: 25,
+                blur: 15,
+                maxZoom: 17,
+                gradient: {0.2: 'blue', 0.4: 'cyan', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red'}
+            }).addTo(map);
+
+            // Alert zones layer
+            dashboardLayers.alerts = L.layerGroup();
+            alertsData.forEach(alert => {
+                const alertColor = alert.level === 'high' ? '#ff6b6b' : '#ffc107';
+                L.circle([alert.lat, alert.lon], {
+                    radius: 15000,
+                    fillColor: alertColor,
+                    color: alertColor,
+                    weight: 2,
+                    opacity: 0.8,
+                    fillOpacity: 0.3
+                }).addTo(dashboardLayers.alerts).bindPopup(`
+                    <div class="custom-popup">
+                        <div class="popup-title">${alert.zone}</div>
+                        <div class="popup-info">Alert Level: <span class="alert-level ${alert.level}">${alert.level.toUpperCase()}</span></div>
+                        <div class="popup-info">Reason: ${alert.reason}</div>
+                        <div class="popup-info">Duration: ${alert.duration}</div>
+                    </div>
+                `);
+            });
+
+            // Weather layer
+            dashboardLayers.weather = L.layerGroup();
+            const weatherWarnings = [
+                { lat: 13.0827, lon: 80.2707, type: 'Storm Warning', severity: 'Medium' },
+                { lat: 8.7642, lon: 78.1348, type: 'High Waves', severity: 'High' }
+            ];
+            
+            weatherWarnings.forEach(warning => {
+                const icon = L.divIcon({
+                    html: `<i class="fas fa-exclamation-triangle" style="color: orange; font-size: 20px;"></i>`,
+                    iconSize: [20, 20],
+                    className: 'weather-icon'
+                });
+                
+                L.marker([warning.lat, warning.lon], {icon: icon})
+                    .addTo(dashboardLayers.weather)
+                    .bindPopup(`
+                        <div class="custom-popup">
+                            <div class="popup-title">Weather Alert</div>
+                            <div class="popup-info">Type: <strong>${warning.type}</strong></div>
+                            <div class="popup-info">Severity: <strong>${warning.severity}</strong></div>
+                        </div>
+                    `);
+            });
+        }
+
+        // Initialize heatmap
+        function initializeHeatmap() {
+            heatmapMap = L.map('heatmap').setView([11.1271, 78.6569], 7);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(heatmapMap);
+
+            // Fishing pressure heatmap
+            const pressureData = generateHeatmapData();
+            heatmapLayers.pressure = L.heatLayer(pressureData, {
+                radius: 30,
+                blur: 20,
+                maxZoom: 17,
+                gradient: {0.2: 'blue', 0.4: 'cyan', 0.6: 'lime', 0.8: 'yellow', 1.0: 'red'}
+            }).addTo(heatmapMap);
+
+            // Overfished alerts
+            heatmapLayers.overfished = L.layerGroup();
+            alertsData.forEach(alert => {
+                if (alert.level === 'high') {
+                    L.circle([alert.lat, alert.lon], {
+                        radius: 20000,
+                        fillColor: '#ff6b6b',
+                        color: '#ff6b6b',
+                        weight: 3,
+                        opacity: 0.9,
+                        fillOpacity: 0.4
+                    }).addTo(heatmapLayers.overfished).bindPopup(`
+                        <div class="custom-popup">
+                            <div class="popup-title">${alert.zone}</div>
+                            <div class="popup-info">Status: <strong>OVERFISHED</strong></div>
+                            <div class="popup-info">Restriction: ${alert.duration}</div>
+                        </div>
+                    `);
+                }
+            });
+
+            // Predicted catch zones
+            heatmapLayers.predicted = L.layerGroup();
+            const predictedZones = [
+                { lat: 13.2, lon: 80.3, prediction: 'High', value: 85 },
+                { lat: 10.8, lon: 79.9, prediction: 'Medium', value: 60 },
+                { lat: 9.1, lon: 79.2, prediction: 'Low', value: 30 }
+            ];
+
+            predictedZones.forEach(zone => {
+                const color = zone.prediction === 'High' ? '#4ecdc4' : 
+                            zone.prediction === 'Medium' ? '#ffc107' : '#ff6b6b';
+                
+                L.circle([zone.lat, zone.lon], {
+                    radius: 18000,
+                    fillColor: color,
+                    color: color,
+                    weight: 2,
+                    opacity: 0.7,
+                    fillOpacity: 0.3
+                }).addTo(heatmapLayers.predicted).bindPopup(`
+                    <div class="custom-popup">
+                        <div class="popup-title">Predicted Catch Zone</div>
+                        <div class="popup-info">Prediction: <strong>${zone.prediction}</strong></div>
+                        <div class="popup-info">Expected Volume: <strong>${zone.value}kg/day</strong></div>
+                    </div>
+                `);
+            });
+
+            // GPS tracking points
+            heatmapLayers.gps = L.layerGroup();
+            const gpsPoints = generateGPSData();
+            gpsPoints.forEach(point => {
+                L.circleMarker([point.lat, point.lon], {
+                    radius: 5,
+                    fillColor: '#667eea',
+                    color: '#fff',
+                    weight: 1,
+                    opacity: 1,
+                    fillOpacity: 0.8
+                }).addTo(heatmapLayers.gps).bindPopup(`
+                    <div class="custom-popup">
+                        <div class="popup-title">Live GPS Track</div>
+                        <div class="popup-info">Boat ID: <strong>${point.boatId}</strong></div>
+                        <div class="popup-info">Last Update: <strong>${point.timestamp}</strong></div>
+                    </div>
+                `);
+            });
+        }
+
+        // Generate sample heatmap data
+        function generateHeatmapData() {
+            const data = [];
+            const centers = [
+                [13.0827, 80.2707], [8.7642, 78.1348], [10.7905, 79.8448],
+                [9.2876, 79.3129], [11.7480, 79.7714]
+            ];
+
+            centers.forEach(center => {
+                for (let i = 0; i < 50; i++) {
+                    const lat = center[0] + (Math.random() - 0.5) * 0.5;
+                    const lon = center[1] + (Math.random() - 0.5) * 0.5;
+                    const intensity = Math.random();
+                    data.push([lat, lon, intensity]);
+                }
+            });
+
+            return data;
+        }
+
+        // Generate GPS tracking data
+        function generateGPSData() {
+            const data = [];
+            for (let i = 0; i < 20; i++) {
+                data.push({
+                    lat: 11.1271 + (Math.random() - 0.5) * 4,
+                    lon: 78.6569 + (Math.random() - 0.5) * 4,
+                    boatId: 'BOAT-' + (1000 + i),
+                    timestamp: new Date().toLocaleTimeString()
+                });
+            }
+            return data;
+        }
+
+        // Toggle dashboard layers
+        function toggleDashboardLayer(layerType) {
+            // Update button states
+            document.querySelectorAll('#dashboard .control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Remove current layer
+            if (dashboardLayers[currentDashboardLayer]) {
+                map.removeLayer(dashboardLayers[currentDashboardLayer]);
+            }
+
+            // Add new layer
+            if (dashboardLayers[layerType]) {
+                map.addLayer(dashboardLayers[layerType]);
+            }
+
+            currentDashboardLayer = layerType;
+        }
+
+        // Toggle heatmap layers
+        function toggleHeatmapLayer(layerType) {
+            // Update button states
+            document.querySelectorAll('#heatmap .control-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Remove current layer
+            if (heatmapLayers[currentHeatmapLayer]) {
+                heatmapMap.removeLayer(heatmapLayers[currentHeatmapLayer]);
+            }
+
+            // Add new layer
+            if (heatmapLayers[layerType]) {
+                heatmapMap.addLayer(heatmapLayers[layerType]);
+            }
+
+            currentHeatmapLayer = layerType;
+        }
+
+        // Populate logbook table
+        function populateLogbook() {
+            const tbody = document.getElementById('logbookData');
+            tbody.innerHTML = '';
+
+            fishingData.forEach(entry => {
+                const row = document.createElement('tr');
+                const statusClass = `status-${entry.status}`;
+                const statusText = entry.status.charAt(0).toUpperCase() + entry.status.slice(1);
+
+                row.innerHTML = `
+                    <td>${entry.id}</td>
+                    <td>${entry.name}</td>
+                    <td>${entry.port}</td>
+                    <td>${entry.date}</td>
+                    <td>${entry.species}</td>
+                    <td>${entry.catch}</td>
+                    <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Filter logbook
+        function filterLogbook() {
+            const searchTerm = document.getElementById('logSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#logbookData tr');
+
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        }
+
+        // Populate alerts
+        function populateAlerts() {
+            const alertsList = document.getElementById('alertsList');
+            alertsList.innerHTML = '';
+
+            alertsData.forEach(alert => {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert-item';
+
+                alertDiv.innerHTML = `
+                    <div class="alert-header">
+                        <div>
+                            <h4>${alert.zone}</h4>
+                            <span class="alert-level ${alert.level}">${alert.level.toUpperCase()}</span>
+                        </div>
+                        <button class="control-btn" onclick="showAlertOnMap(${alert.lat}, ${alert.lon})">
+                            <i class="fas fa-map-marker-alt"></i> Show on Map
+                        </button>
+                    </div>
+                    <div class="popup-info"><strong>Reason:</strong> ${alert.reason}</div>
+                    <div class="popup-info"><strong>Suggested Restriction:</strong> ${alert.duration}</div>
+                    <div class="popup-info"><strong>Status:</strong> Active monitoring required</div>
+                `;
+
+                alertsList.appendChild(alertDiv);
+            });
+        }
+
+        // Show alert on map
+        function showAlertOnMap(lat, lon) {
+            // Switch to heatmap section
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(section => section.classList.remove('active'));
+            
+            document.querySelector('[data-section="heatmap"]').classList.add('active');
+            document.getElementById('heatmap').classList.add('active');
+
+            // Initialize heatmap if not already done
+            if (!heatmapMap) {
+                setTimeout(() => {
+                    initializeHeatmap();
+                    setTimeout(() => {
+                        heatmapMap.setView([lat, lon], 10);
+                    }, 500);
+                }, 100);
+            } else {
+                heatmapMap.setView([lat, lon], 10);
+            }
+        }
+
+        // Initialize charts
+        function initializeCharts() {
+            // Catch trends chart
+            const catchCtx = document.getElementById('catchChart').getContext('2d');
+            new Chart(catchCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Daily Catch (tons)',
+                        data: [12, 19, 15, 25, 22, 30, 28],
+                        borderColor: '#1e3c72',
+                        backgroundColor: 'rgba(30, 60, 114, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Port activity chart
+            const portCtx = document.getElementById('portChart').getContext('2d');
+            new Chart(portCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ports.map(p => p.name),
+                    datasets: [{
+                        data: ports.map(p => p.trips),
+                        backgroundColor: [
+                            '#1e3c72', '#2a5298', '#4ecdc4', '#ff6b6b', '#ffc107'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update dashboard statistics
+        function updateDashboardStats() {
+            // Simulate real-time updates
+            setInterval(() => {
+                const totalTrips = document.getElementById('totalTrips');
+                const currentValue = parseInt(totalTrips.textContent.replace(',', ''));
+                totalTrips.textContent = (currentValue + Math.floor(Math.random() * 3)).toLocaleString();
+
+                const weeklyVolume = document.getElementById('weeklyVolume');
+                const volumeValue = parseFloat(weeklyVolume.textContent.replace('K', ''));
+                weeklyVolume.textContent = (volumeValue + (Math.random() * 0.2 - 0.1)).toFixed(1) + 'K';
+            }, 30000); // Update every 30 seconds
+        }
+
+        // Export functions
+        function exportLogbook(format) {
+            if (format === 'csv') {
+                exportToCSV();
+            } else if (format === 'excel') {
+                exportToExcel();
+            }
+        }
+
+        function exportToCSV() {
+            const headers = ['Fisher ID', 'Fisher Name', 'Port', 'Date & Time', 'Species', 'Catch (kg)', 'Status'];
+            const csvContent = [
+                headers.join(','),
+                ...fishingData.map(row => [
+                    row.id, row.name, row.port, row.date, row.species, row.catch, row.status
+                ].join(','))
+            ].join('\n');
+
+            downloadFile(csvContent, 'fishermen_logbook.csv', 'text/csv');
+        }
+
+        function exportToExcel() {
+            // Simplified Excel export (would normally use a library like SheetJS)
+            const csvContent = fishingData.map(row => 
+                `${row.id}\t${row.name}\t${row.port}\t${row.date}\t${row.species}\t${row.catch}\t${row.status}`
+            ).join('\n');
+            
+            downloadFile(csvContent, 'fishermen_logbook.xls', 'application/vnd.ms-excel');
+        }
+
+        function downloadFile(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Generate reports
+        function generateReport(format) {
+            const reportType = document.getElementById('reportType').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const portFilter = document.getElementById('portFilter').value;
+
+            // Filter data based on criteria
+            let filteredData = fishingData;
+            
+            if (portFilter !== 'all') {
+                filteredData = filteredData.filter(entry => 
+                    entry.port.toLowerCase() === portFilter.toLowerCase()
+                );
+            }
+
+            // Generate report content
+            const reportContent = generateReportContent(filteredData, reportType, startDate, endDate, portFilter);
+            
+            if (format === 'pdf') {
+                // In a real application, you'd use a PDF library like jsPDF
+                alert('PDF report generated successfully!\n\nReport Summary:\n' + reportContent);
+            } else if (format === 'csv') {
+                downloadFile(reportContent, `${reportType}_report.csv`, 'text/csv');
+            }
+
+            // Update preview
+            document.getElementById('reportPreview').innerHTML = `
+                <div style="padding: 1rem; background: #f8f9fa; border-radius: 8px;">
+                    <h4>Report Generated</h4>
+                    <p><strong>Type:</strong> ${reportType.charAt(0).toUpperCase() + reportType.slice(1)} Report</p>
+                    <p><strong>Period:</strong> ${startDate} to ${endDate}</p>
+                    <p><strong>Port Filter:</strong> ${portFilter === 'all' ? 'All Ports' : portFilter.charAt(0).toUpperCase() + portFilter.slice(1)}</p>
+                    <p><strong>Records Found:</strong> ${filteredData.length}</p>
+                    <p><strong>Total Catch:</strong> ${filteredData.reduce((sum, entry) => sum + entry.catch, 0).toFixed(2)} kg</p>
+                </div>
+            `;
+        }
+
+        function generateReportContent(data, type, startDate, endDate, port) {
+            const headers = ['Fisher ID', 'Fisher Name', 'Port', 'Date & Time', 'Species', 'Catch (kg)', 'Status'];
+            const csvContent = [
+                headers.join(','),
+                ...data.map(row => [
+                    row.id, row.name, row.port, row.date, row.species, row.catch, row.status
+                ].join(','))
+            ].join('\n');
+
+            return csvContent;
+        }
+
+        // Mobile menu toggle (for responsive design)
+        function toggleMobileMenu() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('mobile-open');
+        }
+
+        // Add mobile menu button for responsive design
+        if (window.innerWidth <= 768) {
+            const header = document.querySelector('.header');
+            const menuBtn = document.createElement('button');
+            menuBtn.innerHTML = '<i class="fas fa-bars"></i>';
+            menuBtn.className = 'mobile-menu-btn';
+            menuBtn.style.cssText = 'background: #1e3c72; color: white; border: none; padding: 0.5rem; border-radius: 4px; cursor: pointer;';
+            menuBtn.onclick = toggleMobileMenu;
+            header.insertBefore(menuBtn, header.firstChild);
+        }
+    </script>
+</body>
+</html>
